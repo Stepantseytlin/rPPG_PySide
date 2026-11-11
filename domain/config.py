@@ -5,8 +5,8 @@ class Config:
     segLength : int = 1024
     strapLen : int = 40
     SourceType : str = "txt"
-
-    def __init__(self, cad=30, fMa=240, fMi=40, segLength=1024, straplen=20, instant: int = 0, source_type: str = "txt"):
+    nEt : list[int] = [0,2]
+    def __init__(self, cad=30, fMa=240, fMi=40, segLength=1024, straplen=20, instant: int = 0, source_type: str = "txt", nEt : list[int] = [0,2]):
         self.cad = cad
         self.fMa = fMa
         self.fMi = fMi
@@ -18,6 +18,7 @@ class Config:
         self.plotSource = "PW"
         self.deriv = True
         self.Hilbert = True
+        self.nEt = nEt
     def getsegLength(self):
         return self.segLength
 

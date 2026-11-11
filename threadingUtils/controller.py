@@ -82,6 +82,8 @@ class ThreadsManager(QObject):
                 toPlot=data["frame"][:,1]
             elif self.fif.config.plotSource == "deriv":
                 toPlot=data["deriv"]
+            elif self.fif.config.plotSource == "eigvls":
+                toPlot=data["eigvls"]
             elif self.fif.config.plotSource == "pgm":
                 toPlot=data["pgm"][0]
              

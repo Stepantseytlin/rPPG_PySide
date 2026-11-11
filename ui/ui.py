@@ -134,7 +134,21 @@ class ConfigMenu(QWidget):
 
         self.StrapLengthSlider.setValue(20)
         """-----------------------------"""
-
+        self.Eiglabel = QWidget(self.SegmentConfigWidget)
+        self.Eigs = QHBoxLayout(self.Eiglabel)
+        self.feig = QLabel(text="Первая компонента:")
+        self.leig = QLabel(text="Последняя компонента:")
+        self.EigTripletsF = QLineEdit("0",parent = self.StrapLenlabel,)
+        self.EigTripletsL = QLineEdit("2",parent = self.StrapLenlabel,)
+        self.EigTripletsF.setMaximumWidth(15)
+        self.EigTripletsL.setMaximumWidth(15)
+        self.Eigs.addWidget(self.feig)
+        self.Eigs.addWidget(self.EigTripletsF)
+        self.Eigs.addWidget(self.leig)
+        self.Eigs.addWidget(self.EigTripletsL)
+        self.SegmentConfigLayout.addWidget(self.Eiglabel)
+        
+        
 
         self.HilbertCheckBox = QCheckBox("Использовать Преобразование Гильберта",parent = self.SegmentConfigWidget)
         self.SegmentConfigLayout.addWidget(self.HilbertCheckBox)
@@ -143,6 +157,9 @@ class ConfigMenu(QWidget):
         rec = self.rect().height(),self.rect().width()
         self.setButton.setGeometry(0,0,rec[1]//2,rec[0]//2)
         self.setButton.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+    
+    
+        
     def OnfpsChanged(self,text):
         QMessageBox(text = "Внимание. Изменение ФПС влияет на точность оценки чсс").show()
         pass
@@ -295,6 +312,7 @@ class Window(QWidget,Ui_Widget, QObject):
         self.PlotSource.addItem("ДФПГ","ДФПГ")
         self.PlotSource.addItem("АПГ","АПГ")
         self.PlotSource.addItem("Периодограмма Томсона","ПГМ")
+        self.PlotSource.addItem("Собственные значения", "eigvls")
         self.PlotSource.setCurrentIndex(0)
         self.PlotSource.currentIndexChanged.connect(self.on_plot_changed)
 
@@ -325,6 +343,7 @@ class Window(QWidget,Ui_Widget, QObject):
         self.confidence_if=[]
         self.confidence_if.append(self.plot.plot([], [], pen=pg.mkPen({'color':"#2563eb", 'width':1,'style':PySide6.QtCore.Qt.PenStyle.DashLine})))
         self.confidence_if.append(self.plot.plot([], [], pen=pg.mkPen({'color':"#2563eb", 'width':1,'style':PySide6.QtCore.Qt.PenStyle.DashLine})))
+        self.EigScatters = self.plotCR.scatterPlot( [], [], size = 1.5, pen = QtGui.QPen( "blue"))
 
         self.cr_curve : pg.PlotDataItem  = self.plotCR.plot([], [], pen=pg.mkPen("#0f766e", width=2))
 
@@ -477,6 +496,8 @@ class Window(QWidget,Ui_Widget, QObject):
         self.horizontalLayout_2.insertWidget(2,self.configpopup)
         self.configpopup.popup_menu.setObjectName("PopUp")
         self.configpopup.popup_menu.setButton.clicked.connect(self.changeConfig)
+        
+
 
         self.figvid.setText("\u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 TXT \u0438\u043b\u0438 \u0432\u0438\u0434\u0435\u043e, \u043b\u0438\u0431\u043e \u0432\u043a\u043b\u044e\u0447\u0438\u0442\u0435 \u043a\u0430\u043c\u0435\u0440\u0443")
         self.figvid.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -612,6 +633,7 @@ class Window(QWidget,Ui_Widget, QObject):
         segLen = self.configpopup.popup_menu.SegLengthSlider.value()
         strapLen = self.configpopup.popup_menu.StrapLengthSlider.value()
         cad = int(self.configpopup.popup_menu.fpsconfigInput.text())
+        print(f" Eigentriplets fifo = {self.fifo.config.nEt}")
         self.config.cad = cad
         self.stat.Pause = 1
         self.fifo.resize(segLen,strapLen)
@@ -620,6 +642,10 @@ class Window(QWidget,Ui_Widget, QObject):
         self.srcHandler.ChangeConfig(self.config)
     def changeConfig(self):
         previousState = self.stat.Pause
+        feig = self.configpopup.popup_menu.EigTripletsF.text()
+        leig = self.configpopup.popup_menu.EigTripletsL.text()
+        self.config.nEt = list((int(feig),int(leig)))
+        print(f" Eigentriplets = {self.config.nEt}")
         self.configpopup.popup_menu.hide()
         self.ResizeFIFO()
         self.config.Hilbert = bool(self.configpopup.popup_menu.HilbertCheckBox.checkState())
@@ -671,6 +697,8 @@ class Window(QWidget,Ui_Widget, QObject):
                     self.config.plotSource = "deriv"
         elif plotType == "ПГМ":
             self.config.plotSource = "pgm"
+        elif plotType == "eigvls":
+            self.config.plotSource = "eigvls"
         print(f"changed plot for {plotType}")
     def on_source_changed(self, index=None):
         fmt = self.sourceCombo.currentData()
@@ -894,6 +922,7 @@ class Window(QWidget,Ui_Widget, QObject):
             self.plotPGM.removeItem(item)
 
         self.PGMScatterplots.clear()
+        self.EigScatters.clear()
 
     def on_timer(self):
         if not self.fifo.sta.Pause:
@@ -915,7 +944,7 @@ class Window(QWidget,Ui_Widget, QObject):
             return
 
         if self.stat.freqready and len(self.fifo.pgm) > 0 and len(self.IF.values) > 0:
-            # print(f"heart rate shape is {len(self.IF.values[-1])}")
+            
 
             y = np.asarray(self.IF.values[-len(self.IF.values):], dtype=float).reshape(len(self.IF.values),2)*60
             x = np.arange(y.shape[0]) * self.config.strapLen / self.config.cad
@@ -941,6 +970,14 @@ class Window(QWidget,Ui_Widget, QObject):
                  
                 CR = np.asarray(self.fifo.CR[-1], dtype=float).reshape(-1)[:int(self.config.fMa/60/(self.config.cad/self.config.segLength))+20]
                 x = np.arange(CR.shape[0]) * (self.config.cad / self.config.segLength)
+            elif self.config.plotSource=="eigvls":
+                CR = np.asarray(
+                                    self.fifo.CR[-1],
+                                    dtype=float,
+                                ).reshape(-1)
+                # print(f"EIG shape = {CR.shape}")
+                x = np.arange(CR.shape[0])  
+                
             else:
                 if self.plotCR.getAxis("bottom").labelText!="Время, сек":
                     self.plotCR.setLabel("bottom", "Время, сек")
@@ -969,7 +1006,11 @@ class Window(QWidget,Ui_Widget, QObject):
                 )
 
             self.cr_curve.setData(x, CR)
-             
+            if self.config.plotSource=="eigvls":
+                self.EigScatters.setData(x,CR)
+                self.plotCR.setLabel("bottom", "Номер")
+            else:
+                self.EigScatters.clear()
             x = np.arange(self.fifo.pgm[-1].shape[1]//2+1) * (self.config.cad / self.config.segLength)
             y = self.fifo.pgm[-1][0,:self.config.segLength//2+1]
             self.PGMScatterplots.append(self.plotPGM.scatterPlot(x,y, size = 1.5,pen = QtGui.QPen( "blue")))

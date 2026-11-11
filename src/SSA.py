@@ -10,7 +10,7 @@ def stable_svd(matrix: np.ndarray):
     except Exception:
         return np.linalg.svd(matrix, full_matrices=False)
 
-def compute_SSA(TS : np.ndarray, depth : int, nET : int, overlap : float = 0.98, method : str = 'SSA'):
+def compute_SSA(TS : np.ndarray, depth : int, nET : list[int], overlap : float = 0.98, method : str = 'SSA'):
     """Применение метода спектрального сингулярного анализа "Гусеница"
 
         Parameters
@@ -46,9 +46,9 @@ def compute_SSA(TS : np.ndarray, depth : int, nET : int, overlap : float = 0.98,
             U, S, Vt = stable_svd(TrajectoryMatrix.T)
            # print(U.shape, S.shape, Vt.shape)
             # Выбираем первые nET компонент
-            U_n = U[:, :nET]
-            S_n = np.diag(S[:nET])
-            Vt_n = Vt[:nET, :]
+            U_n = U[:, nET[0]:nET[1]]
+            S_n = np.diag(S[nET[0]:nET[1]])
+            Vt_n = Vt[nET[0]:nET[1], :]
             # Восстанавливаем ряд
             Y_recovered = U_n @ S_n @ Vt_n
             # Суммируем антидиагонали
@@ -63,4 +63,4 @@ def compute_SSA(TS : np.ndarray, depth : int, nET : int, overlap : float = 0.98,
 
         else:
             raise NotImplementedError("Метод 'Med' пока не реализован")
-    return  reconstructed_TS , Y_recovered
+    return  reconstructed_TS , Y_recovered, S

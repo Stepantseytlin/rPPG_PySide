@@ -16,6 +16,7 @@ def config_to_dict(config):
         "strapLen": config.strapLen,
         "SourceType": config.SourceType,
         "instant": config.instant,
+        "nEt" : config.nEt
     }
 
 
@@ -28,6 +29,7 @@ def config_from_dict(config_dict):
         straplen=config_dict["strapLen"],
         instant=config_dict.get("instant", 0),
         source_type=config_dict.get("SourceType", "txt"),
+        nEt=config_dict.get("nEt", [0,2]),
     )
     return config
 
@@ -52,7 +54,7 @@ def compute_segment(frame, config_dict, lastfreq =0):
 
     pw = get_PW(rgb_uniform, config, lastfreq)
     # pw = get_PW(np.asarray(frame), config,lastfreq)
-    inst_freq, pgm,deriv = get_IF(pw, config)
+    inst_freq, pgm,deriv, eigVls = get_IF(pw, config)
      
     return {
         "frequency": np.asarray(inst_freq[0]),
@@ -60,7 +62,8 @@ def compute_segment(frame, config_dict, lastfreq =0):
         "pgm": np.asarray(pgm),
         "pw": np.asarray(pw),
         "frame" : np.asarray(rgb_uniform),
-        "deriv" : np.asarray(deriv)
+        "deriv" : np.asarray(deriv),
+        "eigvls" : np.asarray(eigVls)
     }
 
 
